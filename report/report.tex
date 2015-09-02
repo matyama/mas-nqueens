@@ -1,0 +1,55 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+
+\usepackage{geometry}
+\geometry{a4paper}
+
+\usepackage[czech, english]{babel}
+
+\usepackage{lmodern}
+
+\usepackage{graphicx}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{varwidth}
+\usepackage{multirow}
+\usepackage{listings}
+
+\title{Assignment \#3 - DCSP}
+\author{Martin Matyášek}
+
+\begin{document}
+\maketitle
+
+\section{Problem description}
+The \emph{n-queens} problem is formalized as a \emph{DCSP} $\langle X, D, C, A \rangle$ as follows:
+\begin{description}
+\item[variables] $X = \{X_1, \dots, X_n\}$ where $X_i$ represents queen at row $i \in \{1, \dots, n\}$.
+\item[domains] $D = \{D_1, \dots, D_n\}$ where each $D_i = \{1, \dots, n\}$ corresponds to $X_i$ and represents possible column positions of $i$-th queen (i.e. queen in the $i$-th row).
+\item[constraints] $C = \{C_{ij}: 0 < |X_i - X_j| \neq |i - j| \; | \; i \neq j; \; i, j = 1, \dots, n\}$. \\ Each of the $C_{ij}$ constraints restricts positioning of distinct queens $i$ and $j$ so that they do not threaten each other neither vertically nor diagonally\footnote{More precisely, there are actually two relations $C_{ij}^v : 0 < |X_i - X_j|$ (i.e. $X_i \neq X_j$) and $C_{ij}^d : |X_i - X_j| \neq |i - j|$ for each $C_{ij}$. Nonetheless, one can combine these as $C_{ij} \equiv C_{ij}^v \land C_{ij}^d$ since both consider the same pair of distinct variables. So alternatively one can define the constraints complactly as $C = \{C_{ij}: |X_i - X_j| \cdot | \: |X_i - X_j| - |i - j| \: | > 0 \; | \; i \neq j; \; i, j = 1, \dots, n\}$.}.
+\item[agents] $A = \{A_1, \dots, A_n\}$ where each agent $A_i$ is responsible for queen $X_i$.
+\end{description}
+
+\section{Algorithm description}
+The implemented algorithm is an \emph{Asynchronous Bactkracking} algorithm (\emph{ABT}) for \emph{DCSP}. More precisely, it is \emph{ABT-opt} (asynchronous backtracking adapted for optimization) as it is described in \cite{rossi2006handbook}.
+
+The algorithm is rather direct implementation and no significant changes have been made to it, althbough the \emph{AddLink} messages could have been left out due to this specific problem. The message specification is as follows:
+\begin{description}
+\item[Ok?(v)] which higher-priority agent $i$ sends to agent $j$ to ask if $X_i = v$ is ok.
+\item[NoGood(nogood)] which lower-priority agent $j$ sends to $k$ to inform that he cannot set his value due to \emph{nogood} involving $k$. The \emph{nogood} is of the form $v:[conditions]:[tag]:cost:exact$ where $X_k = v$ is no good under $[conditions]$ with the $exact$ $cost$ on which $[tag]$ agents participate.
+\item[AddLink] which lower-priority agent $k$ sends to higher priority agent $i$ to ask for constraint link addition.
+\item[Stop(solution)] which the highest priority agent broadcasts to inform that the problem instance has \emph{solution}. The solution is either empty, in which case the problem instance has no solution, or $*$ indicating that there is a solution and other agents should report their current assignments.
+\end{description}
+
+The very last issues to discuss are \emph{priority ordering} and \emph{termination detection}. Priorities are determined at the very beginning of the distributed search. Each agent knows priorities of all agents in advance as opposed to the agents themselves (uses only a \emph{local view}). The ordering itself is an inverse of agent identifiers (i.e. the highest priority agent has priority $n-1$, the lowest priority agent has priority $0$).
+
+The implementation of guaranteed termination detection is rather simple since it is an inherent feature of the \emph{ABT-opt} algorithm. The algorithm terminates if the highest priority agent generates a \emph{nogood}. There are two possible outcomes, the \emph{cost} of such \emph{nogood} is non-zero and the problem instance has no solution; or the \emph{cost} is zero and the current assignment is the solution. In either way such a \emph{cost} must be \emph{exact}, meaning that all lower-priority agents must have sent an \emph{exact} \emph{nogood} for certain value and therefore the termination is guaranteed since, by induction, all agents have agreed on the solution.
+
+\bibliographystyle{ieeetr}
+\bibliography{report}
+
+\end{document}
